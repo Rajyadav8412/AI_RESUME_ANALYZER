@@ -8,7 +8,10 @@ class User(AbstractUser):
     We inherit everything from Django's AbstractUser
     and can add our own fields later.
     """
-
+    email = models.EmailField(
+    unique=True
+    ) 
+    
     phone_number = models.CharField(
         max_length=15,
         blank=True,
@@ -33,6 +36,9 @@ class User(AbstractUser):
     updated_at = models.DateTimeField(
         auto_now=True
     )
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]
 
     def __str__(self):
         return self.username
