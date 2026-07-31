@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from resumes.models import Resume
 from .utils.parser import extract_text_from_pdf
 from .utils.extractor import extract_resume_information
+from .utils.analyzer import analyze_resume
 
 
 class ExtractResumeTextView(APIView):
@@ -21,11 +22,12 @@ class ExtractResumeTextView(APIView):
             )
 
         extracted_text = extract_text_from_pdf(resume.resume.path)
-        print(extracted_text)
         resume_data = extract_resume_information(extracted_text)
+        analysis_result = analyze_resume(resume_data)
 
         return Response({
         **resume_data,
+        "analysis": analysis_result,
         "text": extracted_text
         })
 
