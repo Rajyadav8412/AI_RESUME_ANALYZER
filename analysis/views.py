@@ -9,6 +9,7 @@ from .utils.analyzer import analyze_resume
 from django.conf import settings
 from .utils.ai_analyzer import analyze_resume_with_ai
 from .models import ResumeAnalysis
+from django.shortcuts import get_object_or_404
 
 
 
@@ -59,3 +60,40 @@ class ExtractResumeTextView(APIView):
         "text": extracted_text
         })
 
+class AnalysisHistoryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        analyses = ResumeAnalysis.objects.filter(user=request.user)
+
+        data = []
+
+        for analysis in analyses:
+            data.append({
+                "id": analysis.id,
+                "created_at": analysis.created_at,
+                "ats_score": analysis.ai_analysis.get("ats_score"),
+            })
+
+        return Response(data)
+
+class AnalysisDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, analysis_id):
+
+        analysis = get_object_or_404(
+            ResumeAnalysis,
+            id=analysis_id,
+            user=request.user
+        )
+
+        return Response({
+            "id": analysis.id,
+            "created_at": analysis.created_at,
+            "resume_data": analysis.resume_data,
+            "analysis": analysis.analysis,
+            "ai_analysis": analysis.ai_analysis,
+            "extracted_text": analysis.extracted_text,
+        })
