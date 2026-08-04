@@ -6,6 +6,7 @@ client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
 import json
 
+GEMINI_MODEL = "models/gemini-3.6-flash"
 
 def analyze_resume_with_ai(resume_text):
 
@@ -40,15 +41,18 @@ Do not add explanations.
     Give at least 4 strengths, 4 weaknesses and 4 suggestions.
 }}
 """
-
-    response = client.models.generate_content(
-    model="models/gemini-3.5-flash",
-    contents=prompt,
-    )
+    try:
+        response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        )
+    except Exception as e:
+        print("Gemini Error:", e)
+        raise
 
     text = response.text.strip()
 
-    print(text)
+    
 
     if text.startswith("```json"):
         text = text.replace("```json", "").replace("```", "").strip()

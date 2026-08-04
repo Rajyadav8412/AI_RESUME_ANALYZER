@@ -12,16 +12,14 @@ class ResumeUploadView(APIView):
 
     def post(self, request):
 
-        print("========== DEBUG ==========")
-        print("request.data :", request.data)
-        print("request.FILES:", request.FILES)
-        print("===========================")
+        
 
         serializer = ResumeSerializer(data=request.data)
+
 
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data)
 
-        print(serializer.errors)
+        
         return Response(serializer.errors, status=400)

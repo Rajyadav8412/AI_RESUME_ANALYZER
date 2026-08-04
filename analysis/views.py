@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404
 
 
 
+
 class ExtractResumeTextView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -26,9 +27,26 @@ class ExtractResumeTextView(APIView):
                 status=404
             )
         
-        extracted_text = extract_text_from_pdf(resume.resume.path)
-        resume_data = extract_resume_information(extracted_text)
-        analysis_result = analyze_resume(resume_data)
+        try:
+            extracted_text = extract_text_from_pdf(resume.resume.path)
+
+            if not extracted_text.strip():
+                return Response(
+                    {"error": "Could not extract text from the uploaded resume."},
+                    status=400
+                )
+
+            resume_data = extract_resume_information(extracted_text)
+            analysis_result = analyze_resume(resume_data)
+
+        except Exception as e:
+            return Response(
+                {
+                    "error": "Failed to process the uploaded resume.",
+                    "details": str(e)
+                },
+                status=500
+                )
 
         try:
             ai_analysis = analyze_resume_with_ai(extracted_text)
@@ -57,7 +75,7 @@ class ExtractResumeTextView(APIView):
         **resume_data,
         "analysis": analysis_result,
         "ai_analysis": ai_analysis,
-        "text": extracted_text
+        
         })
 
 class AnalysisHistoryView(APIView):
@@ -96,4 +114,39 @@ class AnalysisDetailView(APIView):
             "analysis": analysis.analysis,
             "ai_analysis": analysis.ai_analysis,
             "extracted_text": analysis.extracted_text,
+        })
+
+class CompareResumeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        analyses = ResumeAnalysis.objects.filter(
+            user=request.user
+        ).order_by("-created_at")
+
+        if analyses.count() < 2:
+            return Response(
+                {"error": "At least two resume analyses are required."},
+                status=400
+            )
+
+        latest = analyses[0]
+        previous = analyses[1]
+
+        latest_skills = set(latest.resume_data.get("skills", []))
+        previous_skills = set(previous.resume_data.get("skills", []))
+        
+
+        return Response({
+            "old_score": previous.ai_analysis.get("ats_score"),
+            "new_score": latest.ai_analysis.get("ats_score"),
+            "score_improvement":
+                latest.ai_analysis.get("ats_score") -
+                previous.ai_analysis.get("ats_score"),
+
+            "skills_added": list(latest_skills - previous_skills),
+            "skills_removed": list(previous_skills - latest_skills),
+
+            "summary": "Resume comparison generated successfully."
         })
