@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@theme { --color-ink: #07121f; --color-panel: #0b1b2d; --color-line: #1d3952; --color-cyan: #20d9f5; --color-blue: #4d7cff; }
+@layer base { * { @apply border-line; } body { @apply min-h-screen bg-ink text-slate-100 antialiased; background-image: radial-gradient(circle at 5% 0%, rgba(32,217,245,.13), transparent 28rem), radial-gradient(circle at 95% 15%, rgba(77,124,255,.14), transparent 30rem); } }
+@layer components {
+ .glass { @apply border border-white/10 bg-slate-950/45 backdrop-blur-xl shadow-2xl shadow-black/20; }
+ .card { @apply rounded-2xl border border-white/10 bg-slate-950/45 p-5 shadow-2xl shadow-black/20 backdrop-blur-xl; }
+ .nav-link { @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white; }
+ .nav-link.active { @apply bg-cyan/10 text-cyan; }
+ .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan to-blue px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:brightness-110 active:scale-[.98]; }
+ .btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/10; }
+ .input { @apply w-full rounded-xl border border-white/10 bg-slate-950/60 px-3.5 py-3 text-sm outline-none placeholder:text-slate-600 focus:border-cyan/60 focus:ring-2 focus:ring-cyan/10; }
+ .label { @apply mb-2 block text-sm font-medium text-slate-300; }
+}

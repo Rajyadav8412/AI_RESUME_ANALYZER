@@ -17,7 +17,9 @@ from django.shortcuts import get_object_or_404
 class ExtractResumeTextView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    def _analyze(self, request):
+
+        target_role = request.data.get("target_role", "").strip()
 
         resume = Resume.objects.filter(user=request.user).last()
 
@@ -49,7 +51,7 @@ class ExtractResumeTextView(APIView):
                 )
 
         try:
-            ai_analysis = analyze_resume_with_ai(extracted_text)
+            ai_analysis = analyze_resume_with_ai(extracted_text, target_role)
         except Exception as e:
             print("Gemini Error:", e)
 
@@ -69,14 +71,22 @@ class ExtractResumeTextView(APIView):
             resume_data=resume_data,
             analysis=analysis_result,
             ai_analysis=ai_analysis,
+            target_role=target_role,
         )
 
         return Response({
         **resume_data,
         "analysis": analysis_result,
         "ai_analysis": ai_analysis,
+        "target_role": target_role,
         
         })
+
+    def post(self, request):
+        return self._analyze(request)
+
+    def get(self, request):
+        return self._analyze(request)
 
 class AnalysisHistoryView(APIView):
     permission_classes = [IsAuthenticated]
@@ -92,6 +102,7 @@ class AnalysisHistoryView(APIView):
                 "id": analysis.id,
                 "created_at": analysis.created_at,
                 "ats_score": analysis.ai_analysis.get("ats_score"),
+                "target_role": analysis.target_role,
             })
 
         return Response(data)
@@ -114,6 +125,7 @@ class AnalysisDetailView(APIView):
             "analysis": analysis.analysis,
             "ai_analysis": analysis.ai_analysis,
             "extracted_text": analysis.extracted_text,
+            "target_role": analysis.target_role,
         })
 
 class CompareResumeView(APIView):

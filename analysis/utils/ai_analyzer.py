@@ -8,38 +8,41 @@ import json
 
 GEMINI_MODEL = "models/gemini-3.6-flash"
 
-def analyze_resume_with_ai(resume_text):
+def analyze_resume_with_ai(resume_text, target_role=""):
+
+    role = target_role or "the candidate's most relevant target role"
 
     prompt = f"""
 You are an expert ATS Resume Reviewer.
 
-Analyze the following resume and return ONLY valid JSON.
+Analyze this resume for the target role: {role}.
+Evaluate the candidate against realistic expectations for that role. Be specific
+about missing role-relevant skills, projects, experience, keywords and evidence.
+Do not give generic advice. Do not invent experience, skills or achievements.
 
 Resume:
 {resume_text}
 
-Return ONLY this JSON object.
-Do not write markdown.
-Do not use ```json.
-Do not add explanations.
-
+Return ONLY valid JSON, with no Markdown or explanation outside the JSON.
+Use this exact schema:
 {{
-    "summary": "string",
-    "strengths": [
-        "string"
-    ],
-    "weaknesses": [
-        "string"
-    ],
-    "suggestions": [
-        "string"
-    ],
-    "ats_score": 0
-    ats_score must be an integer between 0 and 100.
-    Score the resume realistically based on ATS compatibility, technical depth, projects, experience, formatting, and keyword optimization.
-
-    Give at least 4 strengths, 4 weaknesses and 4 suggestions.
+  "target_role": "{role}",
+  "ats_score": 0,
+  "summary": "A concise 2-3 sentence role-specific review.",
+  "role_match": "A concise explanation of fit for the target role.",
+  "strengths": ["At least four evidence-based strengths"],
+  "weaknesses": ["At least four concrete gaps"],
+  "suggestions": ["At least four prioritized improvements"],
+  "missing_keywords": ["Important role-specific keyword not supported by the resume"],
+  "score_breakdown": {{
+    "skills_match": 0,
+    "project_experience": 0,
+    "ats_formatting": 0,
+    "role_alignment": 0
+  }}
 }}
+
+ats_score and each score_breakdown value must be an integer from 0 to 100.
 """
     try:
         response = client.models.generate_content(

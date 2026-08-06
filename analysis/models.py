@@ -22,6 +22,12 @@ class ResumeAnalysis(models.Model):
 
     ai_analysis = models.JSONField()
 
+    target_role = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
