@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model
+﻿from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
@@ -34,10 +34,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
+        # Use create_user so the password is hashed correctly
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
-            password=validated_data['password']
+            password=validated_data['password'],
         )
         return user
 
@@ -49,9 +50,10 @@ class LoginSerializer(serializers.Serializer):
         email = attrs.get("email")
         password = attrs.get("password")
 
+        # authenticate expects username to map to USERNAME_FIELD (email for our custom user)
         user = authenticate(
             username=email,
-            password=password
+            password=password,
         )
 
         if not user:
@@ -74,3 +76,4 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "profile_picture",
             "created_at",
         ]
+
