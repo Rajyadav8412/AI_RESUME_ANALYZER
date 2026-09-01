@@ -146,6 +146,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:5174",
+    "https://ai-resume-analyzer.vercel.app",  # your frontend's actual domain
 ]
 
 # If using JWT tokens:
