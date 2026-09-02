@@ -30,7 +30,7 @@ class ExtractResumeTextView(APIView):
             )
         
         try:
-            extracted_text = extract_text_from_pdf(resume.resume.path)
+            extracted_text = extract_text_from_pdf(resume.resume)
 
             if not extracted_text.strip():
                 return Response(
