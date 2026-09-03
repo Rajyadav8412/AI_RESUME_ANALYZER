@@ -68,13 +68,264 @@ export function LiveDashboard() {
 
 export function LiveUpload() {
   const navigate = useNavigate();
+
   const [file, setFile] = useState(null);
   const [role, setRole] = useState("Python Developer");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const chooseFile = event => { const selected = event.target.files?.[0]; if (!selected) return; if (selected.type !== "application/pdf") return setError("Please select a PDF resume."); setFile(selected); setError(""); };
-  const upload = async () => { if (!file) return setError("Please choose your PDF resume first."); setLoading(true); setError(""); try { const body = new FormData(); body.append("resume", file); await api.post("/resumes/upload/", body, {headers:{"Content-Type":"multipart/form-data"}}); const result = await api.post("/analysis/extract-text/", {target_role: role}); localStorage.setItem("latest_analysis", JSON.stringify(result.data)); navigate("/analysis"); } catch (err) { const data = err.response?.data; setError(data?.error || Object.values(data || {}).flat().join(" ") || "Upload failed. Please try again."); } finally { setLoading(false); } };
-  return <><PageTitle eyebrow="Role-specific resume analysis" title="Upload your resume"/><div className="mx-auto max-w-3xl"><div className="card mb-5"><label htmlFor="target-role" className="label">Which role are you applying for?</label><select id="target-role" value={role} onChange={event => setRole(event.target.value)} className="input">{roles.map(roleName => <option key={roleName}>{roleName}</option>)}</select><p className="mt-2 text-xs text-slate-500">The AI will assess your resume against the selected role’s skills, keywords and projects.</p></div><div className="card border-dashed border-cyan/30 py-14 text-center"><div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-cyan/10 text-cyan"><UploadCloud size={29}/></div><h2 className="mt-5 text-xl font-semibold">{file?.name || "Drop your resume here"}</h2><p className="mt-2 text-sm text-slate-400">PDF only, up to 10 MB</p><label className="btn-primary mt-6 cursor-pointer">Choose PDF<input type="file" className="hidden" accept=".pdf,application/pdf" onChange={chooseFile}/></label>{file && <button type="button" onClick={upload} disabled={loading} className="btn-primary ml-3 mt-6">{loading ? "Analyzing..." : "Upload and analyze"}<WandSparkles size={17}/></button>}{error && <p className="mx-auto mt-5 max-w-md rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300">{error}</p>}</div></div></>;
+  const [progress, setProgress] = useState(0);
+
+  const chooseFile = (event) => {
+    const selected = event.target.files?.[0];
+
+    if (!selected) return;
+
+    if (selected.type !== "application/pdf") {
+      setFile(null);
+      setError("Please select a PDF resume.");
+      return;
+    }
+
+    setFile(selected);
+    setError("");
+  };
+
+  const upload = async () => {
+    if (!file) {
+      setError("Please choose your PDF resume first.");
+      return;
+    }
+
+    setLoading(true);
+    setProgress(5);
+    setError("");
+
+    let progressInterval;
+
+    try {
+      const body = new FormData();
+      body.append("resume", file);
+
+      // Simulated progress while the backend processes the resume.
+      progressInterval = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 95) return 95;
+
+          if (prev < 25) return prev + 3;
+          if (prev < 50) return prev + 2;
+          if (prev < 75) return prev + 1;
+          if (prev < 90) return prev + 0.5;
+
+          return prev + 0.2;
+        });
+      }, 800);
+
+      // Step 1: Upload resume
+      await api.post("/resumes/upload/", body, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      // Step 2: Analyze resume
+      const result = await api.post(
+        "/analysis/extract-text/",
+        {
+          target_role: role,
+        }
+      );
+
+      // Backend finished successfully
+      clearInterval(progressInterval);
+      setProgress(100);
+
+      localStorage.setItem(
+        "latest_analysis",
+        JSON.stringify(result.data)
+      );
+
+      // Let the user see the completed 100% state briefly.
+      await new Promise((resolve) => setTimeout(resolve, 700));
+
+      navigate("/analysis");
+
+    } catch (err) {
+      clearInterval(progressInterval);
+
+      const data = err.response?.data;
+
+      setError(
+        data?.error ||
+        Object.values(data || {}).flat().join(" ") ||
+        "Upload failed. Please try again."
+      );
+
+      setProgress(0);
+
+    } finally {
+      clearInterval(progressInterval);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <PageTitle
+        eyebrow="Role-specific resume analysis"
+        title="Upload your resume"
+      />
+
+      <div className="mx-auto max-w-3xl">
+
+        {/* Role selection */}
+        <div className="card mb-5">
+          <label htmlFor="target-role" className="label">
+            Which role are you applying for?
+          </label>
+
+          <select
+            id="target-role"
+            value={role}
+            onChange={(event) => setRole(event.target.value)}
+            disabled={loading}
+            className="input"
+          >
+            {roles.map((roleName) => (
+              <option key={roleName}>{roleName}</option>
+            ))}
+          </select>
+
+          <p className="mt-2 text-xs text-slate-500">
+            The AI will assess your resume against the selected role’s
+            skills, keywords and projects.
+          </p>
+        </div>
+
+        {/* Upload card */}
+        <div className="card border-dashed border-cyan/30 py-14 text-center">
+
+          <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-cyan/10 text-cyan">
+            <UploadCloud size={29} />
+          </div>
+
+          <h2 className="mt-5 text-xl font-semibold">
+            {file?.name || "Drop your resume here"}
+          </h2>
+
+          <p className="mt-2 text-sm text-slate-400">
+            PDF only, up to 10 MB
+          </p>
+
+          {/* Choose PDF */}
+          <label
+            className={`btn-primary mt-6 ${
+              loading ? "pointer-events-none opacity-50" : "cursor-pointer"
+            }`}
+          >
+            Choose PDF
+
+            <input
+              type="file"
+              className="hidden"
+              accept=".pdf,application/pdf"
+              onChange={chooseFile}
+              disabled={loading}
+            />
+          </label>
+
+          {/* Analyze button */}
+          {file && (
+            <button
+              type="button"
+              onClick={upload}
+              disabled={loading}
+              className="btn-primary ml-3 mt-6"
+            >
+              {loading ? "Processing..." : "Upload and analyze"}
+
+              {loading ? (
+                <span className="ml-1 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              ) : (
+                <WandSparkles size={17} />
+              )}
+            </button>
+          )}
+
+          {/* Processing UI */}
+          {loading && (
+            <div className="mx-auto mt-8 max-w-xl text-left">
+
+              <div className="mb-3 flex items-center justify-between">
+
+                <div>
+                  <p className="text-sm font-medium text-white">
+                    Analyzing your resume
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-400">
+                    {progress < 20 &&
+                      "Uploading your resume..."}
+
+                    {progress >= 20 &&
+                      progress < 40 &&
+                      "Reading your resume content..."}
+
+                    {progress >= 40 &&
+                      progress < 60 &&
+                      "Extracting skills and experience..."}
+
+                    {progress >= 60 &&
+                      progress < 80 &&
+                      "Evaluating your profile with AI..."}
+
+                    {progress >= 80 &&
+                      progress < 95 &&
+                      "Generating personalized recommendations..."}
+
+                    {progress >= 95 &&
+                      "Finalizing your analysis..."}
+                  </p>
+                </div>
+
+                <span className="text-sm font-semibold text-cyan-300">
+                  {Math.round(progress)}%
+                </span>
+
+              </div>
+
+              {/* Progress bar */}
+              <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-500"
+                  style={{
+                    width: `${progress}%`,
+                  }}
+                />
+              </div>
+
+              {/* Processing indicator */}
+              <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
+
+                <span>
+                  This may take a moment while AI reviews your resume.
+                </span>
+              </div>
+
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <p className="mx-auto mt-5 max-w-md rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300">
+              {error}
+            </p>
+          )}
+
+        </div>
+      </div>
+    </>
+  );
 }
 
 export function LiveAnalysis() {
