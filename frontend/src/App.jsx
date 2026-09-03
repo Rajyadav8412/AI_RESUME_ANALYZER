@@ -15,6 +15,7 @@ function Upload() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
@@ -38,32 +39,60 @@ function Upload() {
     }
 
     setUploading(true);
+    setProgress(5);
     setError("");
+
+    let progressInterval;
 
     try {
       const formData = new FormData();
 
-      // 'resume' must exactly match Django's Resume model field name.
       formData.append("resume", selectedFile);
 
-      // Step 1: Upload resume to Django.
+      // Smooth simulated progress while backend processes the resume
+      progressInterval = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 95) return 95;
+
+          if (prev < 25) return prev + 3;
+          if (prev < 50) return prev + 2;
+          if (prev < 75) return prev + 1;
+          if (prev < 90) return prev + 0.5;
+
+          return prev + 0.2;
+        });
+      }, 800);
+
+      // Step 1: Upload resume to Django
       await api.post("/resumes/upload/", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
 
-      // Step 2: Ask Django to extract text and generate AI analysis.
-      const analysisResponse = await api.get("/analysis/extract-text/");
+      // Step 2: Extract resume and generate AI analysis
+      const analysisResponse = await api.get(
+        "/analysis/extract-text/"
+      );
 
-      // Save response temporarily so the Analysis page can use it next.
+      // Backend completed successfully
+      clearInterval(progressInterval);
+      setProgress(100);
+
+      // Save response temporarily
       localStorage.setItem(
         "latest_analysis",
         JSON.stringify(analysisResponse.data)
       );
 
-      navigate("/analysis");
+      // Small delay so user can actually see 100%
+      setTimeout(() => {
+        navigate("/analysis");
+      }, 500);
+
     } catch (err) {
+      clearInterval(progressInterval);
+
       const backendError = err.response?.data;
 
       if (backendError?.error) {
@@ -71,8 +100,13 @@ function Upload() {
       } else if (backendError) {
         setError(Object.values(backendError).flat().join(" "));
       } else {
-        setError("Upload failed. Ensure Django is running and you are logged in.");
+        setError(
+          "Upload failed. Ensure Django is running and you are logged in."
+        );
       }
+
+      setProgress(0);
+
     } finally {
       setUploading(false);
     }
@@ -113,9 +147,58 @@ function Upload() {
               disabled={uploading}
               className="btn-primary ml-3 mt-6"
             >
-              {uploading ? "Analyzing..." : "Upload and analyze"}
-              <WandSparkles size={17} />
+              {uploading ? "Processing..." : "Upload and analyze"}
+              {uploading ? (
+                <span className="ml-1 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              ) : (
+                <WandSparkles size={17} />
+              )}
             </button>
+          )}
+
+          {uploading && (
+            <div className="mx-auto mt-8 max-w-xl text-left">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-white">
+                    Analyzing your resume
+                  </p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {progress < 20 && "Uploading your resume..."}
+                    {progress >= 20 &&
+                      progress < 40 &&
+                      "Reading your resume content..."}
+                    {progress >= 40 &&
+                      progress < 60 &&
+                      "Extracting skills and experience..."}
+                    {progress >= 60 &&
+                      progress < 80 &&
+                      "Evaluating your profile with AI..."}
+                    {progress >= 80 &&
+                      progress < 95 &&
+                      "Generating personalized recommendations..."}
+                    {progress >= 95 &&
+                      "Finalizing your analysis..."}
+                  </p>
+                </div>
+
+                <span className="text-sm font-semibold text-cyan-300">
+                  {Math.round(progress)}%
+                </span>
+              </div>
+
+              <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+
+              <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
+                This may take a moment while AI reviews your resume.
+              </div>
+            </div>
           )}
 
           {error && (
